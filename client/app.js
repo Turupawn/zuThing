@@ -1,6 +1,7 @@
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
 import circuit from '../circuit/target/circuit.json';
+import QRCode from 'qrcode'; // Import QRCode library
 
 const NETWORK_ID = "534351";
 const METADA_API_URL = "http://localhost:8080";
@@ -110,7 +111,8 @@ function splitIntoPairs(str) {
     return str.match(/.{1,2}/g) || [];
 }
 
-const sendProof = async (comment) => {
+const sendProof = async () => {
+    let message = "Generate zuThing ticket";
     document.getElementById("web3_message").textContent = "Please sign the message ✍️";
 
     const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
@@ -118,8 +120,8 @@ const sendProof = async (comment) => {
     const signer = provider.getSigner();
     const signerAddress = await signer.getAddress();
 
-    const signature = await signer.signMessage(comment);
-    const hashedMessage = ethers.utils.hashMessage(comment);
+    const signature = await signer.signMessage(message);
+    const hashedMessage = ethers.utils.hashMessage(message);
     let publicKey = ethers.utils.recoverPublicKey(hashedMessage, signature);
     publicKey = publicKey.substring(4);
 
@@ -132,7 +134,6 @@ const sendProof = async (comment) => {
     const backend = new BarretenbergBackend(circuit);
     const noir = new Noir(circuit, backend);
 
-    // Todo: Query merkle-path-generator API by querying signerAddress
     let index = 1;
     let hashPath = [
         "0x707e55a12557E89915D121932F83dEeEf09E5d70",
@@ -163,10 +164,10 @@ const sendProof = async (comment) => {
     const proofResult = await verifyProof(tproof, tpublicInputs);
     
     if (proofResult.valid) {
-        document.getElementById("web3_message").textContent = "Proof result:... ✅";
-        document.getElementById("web3_message").textContent = proofResult.hash;
+        document.getElementById("web3_message").textContent = "Valid proof ✅ Your hash is: " + proofResult.hash;
+        //await checkProofHash(proofResult.hash); // Call the new function to check the hash and generate QR code
     } else {
-        document.getElementById("web3_message").textContent = "Proof result:... ❌";
+        document.getElementById("web3_message").textContent = "Invalid proof ❌";
     }
 };
 
@@ -189,15 +190,20 @@ const verifyProof = async (proof, publicInputs) => {
     }
 };
 
-// New function to check if a proof hash exists
-const checkProofHash = async () => {
-    const hash = document.getElementById("web3_message").textContent;
-    
+// New function to check if a proof hash exists and generate a QR code
+const checkProofHash = async (hash) => {
     try {
         const response = await fetch(`${METADA_API_URL}/proof/${hash}`);
         const result = await response.json();
         if (result.exists) {
             document.getElementById("web3_message").textContent = "Proof hash exists in the database ✅";
+            // Generate QR code
+            const qrCodeContainer = document.getElementById("hashQr");
+            qrCodeContainer.innerHTML = ""; // Clear any existing QR code
+            QRCode.toCanvas(qrCodeContainer, hash, { width: 200 }, function (error) {
+                if (error) console.error(error);
+                console.log('QR code generated!');
+            });
         } else {
             document.getElementById("web3_message").textContent = "Proof hash does not exist in the database ❌";
         }

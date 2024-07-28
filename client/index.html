@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <body>
-  <h1>Aztec Noir - Scroll Demo</h1>
-  <h2><i>Anon Message Board</i></h2>
+  <h1>zkTicketing</h1>
+  <h2><i>zuThing Tickets Demo</i></h2>
   <input id="connect_button" type="button" value="Connect" onclick="connectWallet()" style="display: none"></input>
   <p id="account_address" style="display: none"></p>
   <p id="web3_message"></p>
   <p id="contract_state"></p>
 
-  <h3>Send a comment</h3>
-  message: <input type="input"  value="" id="_message"></input>
-  <input type="button" value="Send" onclick="_sendProof()"></input>
-
+  <h3>Produce a proof</h3>
+  <input type="button" value="Produce a proof" onclick="_sendProof()"></input>
+  <br>
+  <canvas id="hashQr"></canvas>
+  
   <h3>Check proof</h3>
-  message: <input type="input"  value="" id="_message"></input>
+  proof hash: <input type="input"  value="" id="_proofHash"></input>
   <input type="button" value="Check" onclick="_checkProofHash()"></input>
-
-  <h3>Comments</h3>
-  <div id="comments"></div>
-
-  <p id="public_input"></p>
-  <p id="proof"></p>
 
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.3.5/web3.min.js"></script>
   <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
@@ -30,14 +25,14 @@
 <script>
   function _sendProof()
   {
-    _message = document.getElementById("_message").value
-    sendProof(_message)
+    sendProof()
   }
-
+  
   function _checkProofHash()
   {
+    _proofHash = document.getElementById("_proofHash").value
     //_message = document.getElementById("_message").value
-    checkProofHash()
+    checkProofHash(_proofHash)
   }
 </script>
 
