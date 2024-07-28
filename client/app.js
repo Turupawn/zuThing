@@ -2,14 +2,13 @@ import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
 import circuit from '../circuit/target/circuit.json';
 
-const NETWORK_ID = "534351";
-const COMMENT_VERIFIER_ADDRESS = "0x123abc";
 
+const NETWORK_ID = "534351";
 const METADA_API_URL = "http://localhost:8080"
 
-
-const MY_CONTRACT_ABI_PATH = "../json_abi/CommentVerifier.json"
-var my_contract
+const NFT_ADDRESS = "0x67fB78F2252884DBf8489E3cc96cDEEbFD052E85";
+const NFT_ABI_PATH = "../json_abi/NFTAbi.json"
+var nftContract
 
 var accounts
 var web3
@@ -72,7 +71,7 @@ async function loadDapp() {
     web3.eth.net.getId((err, netId) => {
       if (netId == NETWORK_ID) {
         var awaitContract = async function () {
-          my_contract = await getContract(web3, COMMENT_VERIFIER_ADDRESS, MY_CONTRACT_ABI_PATH)
+          nftContract = await getContract(web3, NFT_ADDRESS, NFT_ABI_PATH)
           document.getElementById("web3_message").textContent="You are connected to Metamask"
           onContractInitCallback()
           web3.eth.getAccounts(function(err, _accounts){
@@ -107,32 +106,17 @@ async function connectWallet() {
 window.connectWallet=connectWallet;
 
 const onContractInitCallback = async () => {
-  //TODO: NFT hold check
-  /*
-  var commentCount = await my_contract.methods.commentCount().call()
-  var contract_state = "commentCount: " + commentCount
-  
-  var maxMsgPerPage = 5;
-  var pageIterator = 0;
-  var commentsElement = document.getElementById("comments");
-
-  for(var i=parseInt(commentCount);i>0;i--)
-  {
-    var comment = await my_contract.methods.comments(i-1).call()
-    var paragraph = document.createElement("p");
-    paragraph.textContent = "- " + comment;
-    commentsElement.appendChild(paragraph);
-    pageIterator++
-    if(pageIterator >= maxMsgPerPage)
-    {
-      break
-    }
-  }
-  document.getElementById("contract_state").textContent = contract_state;
-  */
 }
 
 const onWalletConnectedCallback = async () => {
+  var userBalance = await nftContract.methods.balanceOf(accounts[0]).call()
+  if(userBalance > 0)
+  {
+    document.getElementById("web3_message").textContent="You are an NFT holder, you can produce a proof ✅";
+  }else
+  {
+    document.getElementById("web3_message").textContent="You are not an NFT holder, you can't produce a proof ❌";
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -149,7 +133,7 @@ const sendProof = async (comment) => {
   const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
   await provider.send("eth_requestAccounts", []);
   const signer = provider.getSigner();
-  const signderAddress = await signer.getAddress();
+  const signerAddress = await signer.getAddress();
 
   const signature = await signer.signMessage(comment);
   var hashedMessage = ethers.utils.hashMessage(comment)
@@ -168,38 +152,7 @@ const sendProof = async (comment) => {
   const backend = new BarretenbergBackend(circuit);
   const noir = new Noir(circuit, backend);
 
-  let merkleTree = [
-    {
-      value: "0x707e55a12557E89915D121932F83dEeEf09E5d70",
-      index: "0",
-      hashPath: ["0x000000000000000000000000bef34f2FCAe62dC3404c3d01AF65a7784c9c4A19","0x00000000000000000000000008966BfFa14A7d0d7751355C84273Bb2eaF20FC3"],
-    },
-    {
-      value: "0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19",
-      index: "1",
-      hashPath: ["0x000000000000000000000000707e55a12557E89915D121932F83dEeEf09E5d70","0x00000000000000000000000008966BfFa14A7d0d7751355C84273Bb2eaF20FC3"],
-    },
-    {
-      value: "0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3",
-      index: "2",
-      hashPath: ["0x00000000000000000000000008966BfFa14A7d0d7751355C84273Bb2eaF20FC3","0x1476e5c502f3a532e7c36640e88eebf769ae99d6c50f3be65279ca937b795a3d"],
-    }
-  ]
-
-  let index = null
-  let hashPath = null
-  for(let i=0; i<merkleTree.length; i++) {
-    if(merkleTree[i].value == signderAddress) {
-      index = merkleTree[i].index
-      hashPath = merkleTree[i].hashPath
-    }
-  }
-  if(index == null || index == hashPath) {
-    console.log("Could not find the signer on the merkle tree")
-    return;
-  }
-
-  // Todo: Query merkle-path-generator API
+  // Todo: Query merkle-path-generator API by quering signerAddress
   index = 0;
   hashPath = ["0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19","0x065ef492771e3d5033fa8243b218244c1465be8255baef07fcf482e26d445e7c"];
   //{"root":"0x2140a6c88945958cd354cba916b9b73eaa7263d21d9c862cc4604f6db892e70f","path":["0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19","0x065ef492771e3d5033fa8243b218244c1465be8255baef07fcf482e26d445e7c"],"index":0}
@@ -221,46 +174,41 @@ const sendProof = async (comment) => {
   var proof = await noir.generateFinalProof(input);
   document.getElementById("web3_message").textContent="Generating proof... ✅";
   
-  proof = "0x" + ethereumjs.Buffer.Buffer.from(proof.proof).toString('hex')
-
-  var tHashedMessage = splitIntoPairs(hashedMessage.substring(2))
-
-  for(var i=0; i<tHashedMessage.length; i++)
-  {
-    tHashedMessage[i] = "0x00000000000000000000000000000000000000000000000000000000000000" + tHashedMessage[i]
+  
+  let tproof = "0x" + ethereumjs.Buffer.Buffer.from(proof.proof).toString('hex')
+  const tpublicInputs = [];
+  for (const [key, value] of proof.publicInputs) {
+    tpublicInputs.push(value);
   }
-
-  tHashedMessage.push("0x2a550743aa7151b3324482a03b2961ec4b038672a701f8ad0051b2c9d2e6c4c0")
-
-  console.log("tHashedMessage2")
-  console.log(tHashedMessage)
-
-
-  await updateMetadata(proof, tHashedMessage, comment)
-
-  /*
-  const result = await my_contract.methods.sendProof(proof, tHashedMessage, title, text)
-  .send({ from: accounts[0], gas: 0, value: 0 })
-  .on('transactionHash', function(hash){
-    document.getElementById("web3_message").textContent="Executing...";
-  })
-  .on('receipt', function(receipt){
-    document.getElementById("web3_message").textContent="Success.";    })
-  .catch((revertReason) => {
-    console.log("ERROR! Transaction reverted: " + revertReason.receipt.transactionHash)
-  });
-  */
-
-
+  
+  document.getElementById("web3_message").textContent="Sending proof to backend... ⌛";
+  let proofResult = await verifyProof(tproof, tpublicInputs);
+  if(proofResult.valid)
+  {
+    document.getElementById("web3_message").textContent="Proof result:... ✅";
+  }
+  else
+  {
+    document.getElementById("web3_message").textContent="Proof result:... ❌";
+  }
 }
 
-const updateMetadata = async (proof, hashedMessage, comment) => {
-  fetch(METADA_API_URL + "/relay?proof=" + proof + "&hashedMessage=" + hashedMessage + "&comment=" + comment)
-  .then(res => res.json())
-  .then(out =>
-    console.log(out))
-  .catch();
-}
 
+const verifyProof = async (proof, publicInputs) => {
+  try {
+    const response = await fetch(`${METADA_API_URL}/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ proof, publicInputs }),
+    });
+
+    const result = await response.json();
+    console.log(result);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
 
 window.sendProof=sendProof;
