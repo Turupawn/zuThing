@@ -1,10 +1,11 @@
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
 import circuit from '../circuit/target/circuit.json';
-import QRCode from 'qrcode'; // Import QRCode library
+import QRCode from 'qrcode';
 
 const NETWORK_ID = "534351";
-const METADA_API_URL = "http://localhost:8080";
+const MERKLE_PATH_SERVICE_API_URL = "http://localhost:8888";
+const VERIFIER_API_URL = "http://localhost:8080";
 
 const NFT_ADDRESS = "0x67fB78F2252884DBf8489E3cc96cDEEbFD052E85";
 const NFT_ABI_PATH = "../json_abi/NFTAbi.json";
@@ -107,10 +108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadDapp();
 });
 
-function splitIntoPairs(str) {
-    return str.match(/.{1,2}/g) || [];
-}
-
 const sendProof = async () => {
     let message = "Generate zuThing ticket";
     document.getElementById("web3_message").textContent = "Please sign the message ✍️";
@@ -134,16 +131,12 @@ const sendProof = async () => {
     const backend = new BarretenbergBackend(circuit);
     const noir = new Noir(circuit, backend);
 
-    let index = 1;
-    let hashPath = [
-        "0x707e55a12557E89915D121932F83dEeEf09E5d70",
-        "0x065ef492771e3d5033fa8243b218244c1465be8255baef07fcf482e26d445e7c"
-    ];
+    let merklePathServiceData = await getMerklePath(accounts[0]);
 
     const input = {
-        hash_path: hashPath,
-        index: index,
-        root: "0x2140a6c88945958cd354cba916b9b73eaa7263d21d9c862cc4604f6db892e70f",
+        hash_path: merklePathServiceData.path,
+        index: merklePathServiceData.index,
+        root: merklePathServiceData.root,
         pub_key_x: Array.from(ethers.utils.arrayify("0x" + pub_key_x)),
         pub_key_y: Array.from(ethers.utils.arrayify("0x" + pub_key_y)),
         signature: sSignature,
@@ -165,16 +158,21 @@ const sendProof = async () => {
     
     if (proofResult.valid) {
         document.getElementById("web3_message").textContent = "Valid proof ✅ Your hash is: " + proofResult.hash;
-        //await checkProofHash(proofResult.hash); // Call the new function to check the hash and generate QR code
+
+        const qrCodeContainer = document.getElementById("hashQr");
+        qrCodeContainer.innerHTML = "";
+        QRCode.toCanvas(qrCodeContainer, proofResult.hash, { width: 200 }, function (error) {
+            if (error) console.error(error);
+            console.log('QR code generated!');
+        });
     } else {
         document.getElementById("web3_message").textContent = "Invalid proof ❌";
     }
 };
 
-// Verify proof function
 const verifyProof = async (proof, publicInputs) => {
     try {
-        const response = await fetch(`${METADA_API_URL}/verify`, {
+        const response = await fetch(`${VERIFIER_API_URL}/verify`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -190,20 +188,12 @@ const verifyProof = async (proof, publicInputs) => {
     }
 };
 
-// New function to check if a proof hash exists and generate a QR code
 const checkProofHash = async (hash) => {
     try {
-        const response = await fetch(`${METADA_API_URL}/proof/${hash}`);
+        const response = await fetch(`${VERIFIER_API_URL}/proof/${hash}`);
         const result = await response.json();
         if (result.exists) {
             document.getElementById("web3_message").textContent = "Proof hash exists in the database ✅";
-            // Generate QR code
-            const qrCodeContainer = document.getElementById("hashQr");
-            qrCodeContainer.innerHTML = ""; // Clear any existing QR code
-            QRCode.toCanvas(qrCodeContainer, hash, { width: 200 }, function (error) {
-                if (error) console.error(error);
-                console.log('QR code generated!');
-            });
         } else {
             document.getElementById("web3_message").textContent = "Proof hash does not exist in the database ❌";
         }
@@ -211,6 +201,24 @@ const checkProofHash = async (hash) => {
         console.error('Error:', error);
         document.getElementById("web3_message").textContent = "Error checking proof hash";
     }
+};
+
+const getMerklePath = async (address) => {
+  try {
+      document.getElementById("web3_message").textContent = "Retrieving Merkle path... ⌛";
+      const response = await fetch(`${MERKLE_PATH_SERVICE_API_URL}/merkle-path/${address}`);
+      
+      if (!response.ok) {
+          throw new Error('Address not found or error retrieving path');
+      }
+
+      const result = await response.json();
+      return result;
+      // Process result as needed
+  } catch (error) {
+      console.error('Error:', error);
+      document.getElementById("web3_message").textContent = "Error retrieving Merkle path";
+  }
 };
 
 window.checkProofHash = checkProofHash;

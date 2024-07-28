@@ -3,10 +3,12 @@ const bodyParser = require('body-parser');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
-const port = 3000;
+const port = 8888;
 
+app.use(cors());
 app.use(bodyParser.json());
 
 const addresses = require('./addresses.json');
