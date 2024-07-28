@@ -4,19 +4,31 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { ethers } = require('ethers');
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
+const NFT_ADDRESS = process.env.NFT_ADDRESS;
 
 app.use(cors());
 app.use(bodyParser.json());
 
-const addresses = require('./addresses.json');
+const addressesPath = path.join(__dirname, 'addresses.json');
 const merklePathsDir = path.join(__dirname, 'merkle_paths');
 
 if (!fs.existsSync(merklePathsDir)) {
     fs.mkdirSync(merklePathsDir);
 }
+
+// Define the ABI directly in the code
+const NFT_ABI = [
+    "function totalSupply() view returns (uint256)",
+    "function tokenByIndex(uint256 index) view returns (uint256)",
+    "function ownerOf(uint256 tokenId) view returns (address)"
+];
+
+// Set up ethers provider
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
 function runNargoProve(left, right) {
     const proverTomlContent = `
@@ -124,6 +136,36 @@ app.get('/merkle-path/:address', (req, res) => {
         path: merklePathData.path,
         index: merklePathData.index
     });
+});
+
+// New endpoint to fetch NFT holders
+app.post('/fetch-nft-holders', async (req, res) => {
+    if (!NFT_ADDRESS) {
+        return res.status(500).send('NFT contract address is not set');
+    }
+
+    try {
+        const contract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, provider);
+
+        // Fetch total supply
+        const totalSupply = Number(await contract.totalSupply());
+        const holders = [];
+
+        for (let i = 0; i < totalSupply; i++) {
+            const tokenId = await contract.tokenByIndex(i);
+            const owner = await contract.ownerOf(tokenId);
+
+            if (!holders.includes(owner)) {
+                holders.push(owner);
+            }
+        }
+
+        fs.writeFileSync(addressesPath, JSON.stringify(holders, null, 2));
+        res.send('NFT holders fetched and saved successfully.');
+    } catch (error) {
+        console.error('Error fetching NFT holders:', error.message);
+        res.status(500).send('Error fetching NFT holders');
+    }
 });
 
 app.listen(port, () => {
