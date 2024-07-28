@@ -30,7 +30,7 @@ export default defineConfig(({ command }) => {
           hook: 'buildStart',
         }),
         command === 'serve' ? wasmContentTypePlugin : [],
-        EnvironmentPlugin([]),
+        EnvironmentPlugin(['NETWORK_ID', 'MERKLE_PATH_SERVICE_API_URL', 'VERIFIER_API_URL', 'NFT_ADDRESS', 'NFT_ABI_PATH']),
       ],
     };
   }

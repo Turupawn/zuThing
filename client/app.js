@@ -3,12 +3,12 @@ import { Noir } from '@noir-lang/noir_js';
 import circuit from '../circuit/target/circuit.json';
 import QRCode from 'qrcode';
 
-const NETWORK_ID = "534351";
-const MERKLE_PATH_SERVICE_API_URL = "http://localhost:8888";
-const VERIFIER_API_URL = "http://localhost:8080";
+const NETWORK_ID = process.env.NETWORK_ID;
+const MERKLE_PATH_SERVICE_API_URL = process.env.MERKLE_PATH_SERVICE_API_URL;
+const VERIFIER_API_URL = process.env.VERIFIER_API_URL;
 
-const NFT_ADDRESS = "0x67fB78F2252884DBf8489E3cc96cDEEbFD052E85";
-const NFT_ABI_PATH = "../json_abi/NFTAbi.json";
+const NFT_ADDRESS = process.env.NFT_ADDRESS;
+const NFT_ABI_PATH = process.env.NFT_ABI_PATH;
 let nftContract;
 
 let accounts;
@@ -163,7 +163,6 @@ const sendProof = async () => {
         qrCodeContainer.innerHTML = "";
         QRCode.toCanvas(qrCodeContainer, proofResult.hash, { width: 200 }, function (error) {
             if (error) console.error(error);
-            console.log('QR code generated!');
         });
     } else {
         document.getElementById("web3_message").textContent = "Invalid proof ❌";

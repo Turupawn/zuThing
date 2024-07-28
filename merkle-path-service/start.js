@@ -6,7 +6,7 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const port = 8888;
+const port = process.env.PORT;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -63,7 +63,7 @@ function getMerklePath(addresses, targetAddress) {
     return {
         root: tree[tree.length - 1][0],
         path,
-        index: addresses.indexOf(targetAddress)  // Add index here
+        index: addresses.indexOf(targetAddress)
     };
 }
 
@@ -85,7 +85,7 @@ app.post('/generate', (req, res) => {
         const merklePathFilePath = path.join(merklePathsDir, `${address}.json`);
         const data = {
             path: merklePath.path,
-            index: merklePath.index  // Store index here
+            index: merklePath.index
         };
         fs.writeFileSync(merklePathFilePath, JSON.stringify(data, null, 2));
     });
@@ -122,7 +122,7 @@ app.get('/merkle-path/:address', (req, res) => {
     res.send({
         root,
         path: merklePathData.path,
-        index: merklePathData.index  // Return index here
+        index: merklePathData.index
     });
 });
 
