@@ -1,5 +1,7 @@
 Privacy ticketing system: Show a QR code linked to a zk proof to verify NFT ownership for event entry without revealing your identity.
 
+![zuThing demo](https://github.com/user-attachments/assets/85cbd9e9-b3e3-47a1-a366-9acd14cc7fe7)
+
 ---
 
 # Table of Contents
@@ -88,6 +90,8 @@ NETWORK_ID="534351" MERKLE_PATH_SERVICE_API_URL="http://localhost:8888" VERIFIER
 * `verifier-backend/` Backend API service that verifies proofs and keeps track of proofs previously submitted.
 
 ## 📐 Architecture
+
+![diagram](https://github.com/user-attachments/assets/085c5183-4d07-4f86-acae-4a91525daa95)
 
 ```uml
 @startuml
