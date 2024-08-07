@@ -25,7 +25,7 @@ Privacy ticketing system: Show a QR code linked to a zk proof to verify NFT owne
 | Feature | Supported |
 |----------|------------ |
 | Noir Circuits | ✅ |
-| Ultra Plunk backend | ✅ |
+| Ultra Plonk backend | ✅ |
 | Pedersen merkle inclusion proofs | ✅ |
 | Colin's ecrecover lib | ✅ |
 | Very vanilla express, sqlite, ethersjs combo | ✅ |
